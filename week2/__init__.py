@@ -18,7 +18,7 @@ def create_app(test_config=None):
             priors_gb = priors.groupby("query")
             app.config["priors_df"] = priors
             app.config["priors_gb"] = priors_gb
-        #print(app.config)
+        print(app.config)
     else:
         # load the test config if passed in
         app.config.from_mapping(test_config)

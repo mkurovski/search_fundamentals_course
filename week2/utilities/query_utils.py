@@ -171,6 +171,8 @@ def add_spelling_suggestions(query_obj, user_query):
     #}
 
 
+MIN_PRIOR = 0.001
+BOOST = 100
 # Given the user query from the UI, the query object we've built so far and a Pandas data GroupBy data frame,
 # construct and add a query that consists of the ids from the items that were clicked on by users for that query
 # priors_gb (loaded in __init__.py) is grouped on query and has a Series of SKUs/doc ids for every document that was cliecked on for this query
@@ -181,9 +183,21 @@ def add_click_priors(query_obj, user_query, priors_gb):
             click_prior = ""
             #### W2, L1, S1
             # Create a string object of SKUs and weights that will boost documents matching the SKU
-            print("TODO: Implement me")
-            if click_prior != "":
-                click_prior_query_obj = None # Implement a query object that matches on the ID or SKU with weights of
+            # TODO: wrap into separate method
+            click_prior = prior_clicks_for_query["sku"].value_counts(normalize=True)
+            # Reduce noise and filter for those with prob > 0.001
+            click_prior = click_prior[click_prior > MIN_PRIOR]
+            click_prior_str = [f"{key}^{round(val*BOOST, 4)}" for key, val in click_prior.to_dict().items()]
+            click_prior_str = " ".join(click_prior_str)
+
+            if click_prior_str != "":
+                # Implement a query object that matches on the ID or SKU with weights of
+                click_prior_query_obj = {
+                    "query_string": {
+                        "fields": ["sku"],
+                        "query": click_prior_str
+                    }
+                }
                 # This may feel like cheating, but it's really not, esp. in ecommerce where you have all this prior data,
                 if click_prior_query_obj is not None:
                     query_obj["query"]["function_score"]["query"]["bool"]["should"].append(click_prior_query_obj)
@@ -191,8 +205,6 @@ def add_click_priors(query_obj, user_query, priors_gb):
         print(ke)
         print(f"Can't process user_query: {user_query} for click priors")
         pass
-
-
 
 
 def add_aggs(query_obj):
